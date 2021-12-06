@@ -66,21 +66,32 @@ class App extends Component {
         // 교체하는 형태임. 걍 push하는 것은 원본을 변형시키고, Array.from과 concat, setState로 직접 바꾸는 것은
         // 복제해서 하든 그냥 하든 교체하는 형태다.
         this.setState({
-          contents:newContents
+          contents:newContents,
+          mode:"read",
+          selected_content_id: this.max_content_id
         });
-        console.log(_title, _desc);
+        
       }.bind(this)}>
       </CreateContent>
     } else if(this.state.mode === 'update'){
       _content = this.getReadContent();
-      _article = <UpdateContent data={_content} onSubmit={function(_title, _desc){
-        this.max_content_id += 1;
-        var newContents = Array.from(this.state.contents);
-        newContents.push({id:this.max_content_id, title:_title, desc:_desc});
+      _article = <UpdateContent data={_content} onSubmit=
+      {function(_id, _title, _desc){
+        var _contents = Array.from(this.state.contents); // this.state.contents를 복사한 새로운 배열이 만들어짐.
+        // 나중에 성능을 튜닝할 때 필요한 immutable한, 원본을 바꾸지 않는 Technic임.
+        var i = 0;
+        while (i < _contents.length){
+          if(_contents[i].id === _id){
+            _contents[i] = {id:_id, title:_title, desc:_desc};
+            break;
+          }
+          i+=1;
+        }
         this.setState({
-          contents:newContents
+          contents:_contents,
+          mode:"read"
         });
-        console.log(_title, _desc);
+        
       }.bind(this)}>
       </UpdateContent>
     }
@@ -112,9 +123,28 @@ class App extends Component {
         </TableOfContent>
 
         <Control onChangeMode={function(_mode){
-          this.setState({
-            mode: _mode
-          });
+          if(_mode === 'delete'){
+            if(window.confirm('really?')){
+              var _contents = Array.from(this.state.contents);
+              var i = 0;
+              while (i < this.state.contents.length){
+                if(_contents[i].id === this.state.selected_content_id){
+                  _contents.splice(i,1);
+                  break;
+                }
+                i+=1;
+              }
+              this.setState({
+                mode:'welcome',
+                contents:_contents
+              });
+              alert('deleted!');
+            }
+          } else {
+            this.setState({
+              mode: _mode
+            });
+          }
 
         }.bind(this)}>
         </Control>
@@ -167,6 +197,15 @@ class App extends Component {
       // 바꾸면 아예 원본값 자체가 바뀌어서 component가 업데이트된 것이 아닌 것으로 간주하기 때문임.
       // 19.8 원본을 바꾸지 않고 setState에다가 값을 세팅하는 방법을 알려줄 것..!
       // 불변성, immutable이라고 함.
+      // 22. 복습 Immutable이라는 js 라이브러리 활용해보라. / 그다음으로 router라는 이슈가 있음.
+      // URL 만으로 페이지를 찾아올 수 없다는 단점을 해결해줄 도구가 React Router!
+      // URL에 따라 적당한 컴포넌트 실행가능! URL에 접근하는 사용자에게는 
+      // Create-react-app <- 기본 도구임. npm run eject로 create-react-app 을 설정을 바꿔볼 수 있음.
+      // 한번 하면 못 돌아가니 주의할 것.
+      // redux 플러그인..! 엄청 많은 props state를 만져야하는 어려움을 해결해줌. 
+      // react server side rendering - 서버에서 웹페이지 완성후에 던질 수 있음. 초기구동시간 단축하면서
+      // 로딩 필요없는 js 애플리케이션 특성은 유지 가능. 그러면서도 검색엔진에도 유리함
+      // React Native - 앱 만들기!
     );
   }
 }
